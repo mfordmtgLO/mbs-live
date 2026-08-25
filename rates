@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MBS LIVE — Mortgage-Backed Securities Trading Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#07090F;--surface:#0D1017;--panel:#111520;--border:#1C2030;
+    --border2:#242840;--text:#C8CEDD;--muted:#4A5068;--label:#6B7594;
+    --green:#00E5A0;--red:#FF4D6A;--amber:#F5C843;--blue:#4B8FFF;--purple:#9B6BFF;
+    --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.4;min-height:100vh;overflow-x:hidden}
+  header{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--blue),var(--purple));clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0}
+  .logo-text{font-family:var(--mono);font-size:15px;font-weight:600;letter-spacing:.12em;color:#fff}
+  .logo-sub{font-family:var(--mono);font-size:9px;color:var(--label);letter-spacing:.18em;text-transform:uppercase}
+  .header-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .live-badge{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.1em}
+  .live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.4s ease-in-out infinite;box-shadow:0 0 6px var(--green)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .clock{font-family:var(--mono);font-size:11px;color:var(--label)}
+  .ust-banner{font-family:var(--mono);font-size:10px;color:var(--amber);background:rgba(245,200,67,.08);border:1px solid rgba(245,200,67,.2);border-radius:3px;padding:3px 10px;letter-spacing:.06em}
+  .tape-wrap{overflow:hidden;background:var(--surface);border-bottom:1px solid var(--border);padding:5px 0}
+  .tape{display:flex;gap:0;animation:scroll-tape 55s linear infinite;white-space:nowrap;width:max-content}
+  .tape:hover{animation-play-state:paused}
+  @keyframes scroll-tape{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .tape-item{display:inline-flex;align-items:center;gap:8px;padding:0 22px;font-family:var(--mono);font-size:11px;border-right:1px solid var(--border)}
+  .tape-name{color:var(--label)}.tape-price{color:#fff;font-weight:500}
+  .tape-chg.up{color:var(--green)}.tape-chg.dn{color:var(--red)}.tape-chg.fl{color:var(--muted)}
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:1px;background:var(--border);min-height:calc(100vh - 95px)}
+  .pane{background:var(--surface);padding:18px 20px}
+  .pane-title{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--label);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .pane-title::after{content:'';flex:1;height:1px;background:var(--border)}
+  .pane-sub{font-family:var(--mono);font-size:9px;letter-spacing:.08em}
+  .mbs-table{width:100%;border-collapse:collapse}
+  .mbs-table th{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--muted);text-align:right;padding:4px 10px 10px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+  .mbs-table th:first-child{text-align:left}
+  .mbs-table td{font-family:var(--mono);font-size:12px;padding:8px 10px;color:var(--text);text-align:right;border-bottom:1px solid var(--border);transition:background .15s}
+  .mbs-table td:first-child{text-align:left}
+  .mbs-table tr:hover td{background:var(--panel)}
+  .coupon-label{font-weight:600;color:#fff;font-size:13px}
+  .coupon-sub{font-size:9px;color:var(--muted);margin-top:2px}
+  .price-cell{color:#fff;font-weight:500;font-size:13px}
+  .yield-cell{color:var(--amber)}.oas-cell{color:var(--purple)}.spr-cell{color:var(--blue);font-size:11px}
+  .chg-up{color:var(--green)}.chg-dn{color:var(--red)}.chg-fl{color:var(--muted)}
+  .flash-up{animation:fgu .45s ease}.flash-dn{animation:frd .45s ease}
+  @keyframes fgu{0%{background:rgba(0,229,160,.22)}100%{background:transparent}}
+  @keyframes frd{0%{background:rgba(255,77,106,.22)}100%{background:transparent}}
+  .vol-bar{display:inline-block;height:10px;background:var(--blue);opacity:.45;border-radius:2px;vertical-align:middle;transition:width .4s}
+  canvas.spark{vertical-align:middle}
+  .sidebar{grid-row:span 2;display:flex;flex-direction:column;gap:1px;background:var(--border)}
+  .sidebar>.pane{flex:0 0 auto}
+  .news-pane{flex:1 1 auto;overflow-y:auto;max-height:calc(100vh - 300px)}
+  .rates-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .rate-card{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 12px;position:relative}
+  .rate-label{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--label);text-transform:uppercase;margin-bottom:3px}
+  .rate-val{font-family:var(--mono);font-size:18px;font-weight:600}
+  .rate-sub{font-size:9px;color:var(--muted);margin-top:2px}
+  .rate-live{position:absolute;top:7px;right:7px;width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.4s ease-in-out infinite}
+  .method-note{background:rgba(75,143,255,.06);border:1px solid rgba(75,143,255,.15);border-radius:4px;padding:8px 12px;font-size:10px;color:var(--blue);line-height:1.55;margin-top:8px}
+  .news-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:36px 20px;color:var(--muted);font-family:var(--mono);font-size:11px;text-align:center}
+  .spinner{width:22px;height:22px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .news-item{padding:13px 0;border-bottom:1px solid var(--border)}
+  .news-item:last-child{border-bottom:none}
+  .news-cat{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:4px}
+  .news-hl{font-size:12px;font-weight:500;color:#fff;line-height:1.45;margin-bottom:4px}
+  .news-body{font-size:11px;color:var(--label);line-height:1.55}
+  .news-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px}
+  .bull{background:rgba(0,229,160,.1);color:var(--green)}
+  .bear{background:rgba(255,77,106,.1);color:var(--red)}
+  .neut{background:rgba(75,143,255,.1);color:var(--blue)}
+  .disc{background:rgba(245,200,67,.06);border:1px solid rgba(245,200,67,.18);border-radius:4px;padding:8px 14px;margin-bottom:16px;font-size:10px;color:var(--amber);line-height:1.55}
+  .btm{background:var(--surface);border-top:1px solid var(--border);padding:7px 20px;display:flex;gap:14px;align-items:center;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;grid-column:1;flex-wrap:wrap}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}.sidebar{grid-row:auto}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-mark"></div>
+    <div><div class="logo-text">MBS LIVE</div><div class="logo-sub">Mortgage-Backed Securities Terminal</div></div>
+  </div>
+  <div class="header-right">
+    <div class="ust-banner" id="ust-banner">Fetching UST yields…</div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <div class="clock" id="clock">—</div>
+  </div>
+</header>
+<div class="tape-wrap"><div class="tape" id="tape">&nbsp;</div></div>
+<div class="grid">
+  <div class="pane">
+    <div class="pane-title">Agency MBS Coupon Bonds — TBA Prices <span class="pane-sub" id="anchor-note" style="color:var(--muted)">⟳ anchoring…</span></div>
+    <div class="disc" id="disc">⟳ Connecting to U.S. Treasury yield curve…</div>
+    <table class="mbs-table">
+      <thead><tr>
+        <th>Coupon / Pool</th><th>Price</th><th>Day Chg</th>
+        <th>Yield %</th><th>OAS (bp)</th><th>Gross Spread</th><th>Vol (B)</th><th>Trend</th>
+      </tr></thead>
+      <tbody id="mbs-body"></tbody>
+    </table>
+  </div>
+  <div class="sidebar">
+    <div class="pane">
+      <div class="pane-title">UST Yield Curve <span id="ust-src" style="font-family:var(--mono);font-size:8px;color:var(--muted)">LOADING</span></div>
+      <div class="rates-grid" id="rates-grid"></div>
+      <div class="method-note">Price = 100 + duration × (coupon − yield)<br>MBS yield = 10Y CMT + OAS spread<br>±0.5bp intraday noise applied on real anchor</div>
+    </div>
+    <div class="pane news-pane">
+      <div class="pane-title">Market Intelligence <span style="font-family:var(--mono);font-size:8px;color:var(--blue);background:rgba(75,143,255,.1);padding:1px 5px;border-radius:2px">AI + WEB SEARCH</span></div>
+      <div id="news-container"><div class="news-loading"><div class="spinner"></div>Fetching live market stories…</div></div>
+    </div>
+  </div>
+  <div class="btm">
+    <span id="btm-src" style="color:var(--muted);font-weight:600">⟳ Connecting…</span>
+    <span>|</span><span>OAS vs 10Y CMT</span>
+    <span>|</span><span>Prices: duration-based model</span>
+    <span>|</span><span>Live TBA quotes: Bloomberg / ICE only</span>
+    <span>|</span><span id="last-upd">—</span>
+  </div>
+</div>
+
+<script>
+const BONDS=[
+  {id:'fnma25', name:'FNMA 2.5%', agency:'FNMA', coupon:2.5, hist_oas:38, dur:6.8, vol:1.84},
+  {id:'fnma30', name:'FNMA 3.0%', agency:'FNMA', coupon:3.0, hist_oas:35, dur:6.2, vol:2.65},
+  {id:'fnma35', name:'FNMA 3.5%', agency:'FNMA', coupon:3.5, hist_oas:32, dur:5.6, vol:3.12},
+  {id:'fnma40', name:'FNMA 4.0%', agency:'FNMA', coupon:4.0, hist_oas:29, dur:5.1, vol:2.94},
+  {id:'fnma45', name:'FNMA 4.5%', agency:'FNMA', coupon:4.5, hist_oas:26, dur:4.5, vol:2.10},
+  {id:'fnma50', name:'FNMA 5.0%', agency:'FNMA', coupon:5.0, hist_oas:23, dur:4.0, vol:1.78},
+  {id:'fnma55', name:'FNMA 5.5%', agency:'FNMA', coupon:5.5, hist_oas:20, dur:3.5, vol:1.43},
+  {id:'fnma60', name:'FNMA 6.0%', agency:'FNMA', coupon:6.0, hist_oas:18, dur:3.1, vol:0.98},
+  {id:'fhlmc30',name:'FHLMC 3.0%',agency:'FHLMC',coupon:3.0, hist_oas:36, dur:6.2, vol:1.20},
+  {id:'fhlmc35',name:'FHLMC 3.5%',agency:'FHLMC',coupon:3.5, hist_oas:33, dur:5.6, vol:1.56},
+  {id:'fhlmc45',name:'FHLMC 4.5%',agency:'FHLMC',coupon:4.5, hist_oas:27, dur:4.5, vol:1.34},
+  {id:'fhlmc55',name:'FHLMC 5.5%',agency:'FHLMC',coupon:5.5, hist_oas:21, dur:3.5, vol:0.89},
+  {id:'gnma30', name:'GNMA 3.0%', agency:'GNMA', coupon:3.0, hist_oas:28, dur:6.0, vol:0.64},
+  {id:'gnma35', name:'GNMA 3.5%', agency:'GNMA', coupon:3.5, hist_oas:24, dur:5.4, vol:0.72},
+  {id:'gnma50', name:'GNMA 5.0%', agency:'GNMA', coupon:5.0, hist_oas:16, dur:3.8, vol:0.48},
+  {id:'gnma60', name:'GNMA 6.0%', agency:'GNMA', coupon:6.0, hist_oas:13, dur:2.9, vol:0.31},
+];
+
+let UST={y3m:null,y2:null,y5:null,y10:null,y30:null,source:'loading',asOf:'—'};
+const S={},H={},BASE={y10:null};
+const maxVol=Math.max(...BONDS.map(b=>b.vol));
+BONDS.forEach(b=>{S[b.id]={price:100,yield:b.coupon,oas:b.hist_oas,chg:0,open:null};H[b.id]=[];});
+
+function derivePrice(b,y10){
+  const my=y10+b.hist_oas/100;
+  return Math.max(70,Math.min(116,100+b.dur*(b.coupon-my)));
+}
+function recompute(){
+  if(UST.y10===null)return;
+  BONDS.forEach(b=>{
+    const s=S[b.id],p=derivePrice(b,UST.y10);
+    if(s.open===null)s.open=p;
+    s.price=p;s.yield=UST.y10+b.hist_oas/100;s.oas=b.hist_oas;s.chg=p-s.open;
+    H[b.id].push(p);if(H[b.id].length>90)H[b.id].shift();
+  });
+}
+
+// ── Parse UST XML (handles namespace differences across browsers) ──
+function parseXML(txt){
+  const xml=new DOMParser().parseFromString(txt,'text/xml');
+  const entries=xml.querySelectorAll('entry');
+  if(!entries.length)throw new Error('no entries');
+  const last=entries[entries.length-1];
+  function gv(tag){
+    // try direct tag name and namespace prefix variants
+    for(const t of[tag,'d:'+tag,'m:'+tag]){
+      const el=last.querySelector(t);
+      if(el&&el.textContent.trim())return parseFloat(el.textContent);
+    }
+    // DOM Level 2 fallback
+    const nl=last.getElementsByTagName(tag);
+    if(nl.length)return parseFloat(nl[0].textContent);
+    const nl2=last.getElementsByTagName('d:'+tag);
+    if(nl2.length)return parseFloat(nl2[0].textContent);
+    return null;
+  }
+  function gs(tag){
+    for(const t of[tag,'d:'+tag]){
+      const el=last.querySelector(t);if(el)return el.textContent;
+    }
+    return null;
+  }
+  const y10=gv('BC_10YEAR');
+  if(!y10)throw new Error('missing 10Y');
+  const dateStr=gs('NEW_DATE')||'';
+  return{
+    y3m:gv('BC_3MONTH'),y6m:gv('BC_6MONTH'),y1:gv('BC_1YEAR'),
+    y2:gv('BC_2YEAR'),y5:gv('BC_5YEAR'),y7:gv('BC_7YEAR'),
+    y10,y20:gv('BC_20YEAR'),y30:gv('BC_30YEAR'),
+    source:'treasury.gov',asOf:dateStr.slice(0,10)||'today'
+  };
+}
+
+async function fetchUST(){
+  // ── Attempt 1: treasury.gov direct ──
+  try{
+    const now=new Date();
+    const ym=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+    const url=`https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month=${ym}`;
+    const res=await fetch(url,{cache:'no-store'});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    UST={...parseXML(await res.text())};
+    BASE.y10=UST.y10;
+    applyUST(true);return;
+  }catch(e){console.warn('treasury.gov:',e.message);}
+
+  // ── Attempt 2: AI web-search for current yields ──
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:400,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:
+          'Search for the latest U.S. Treasury CMT yield curve rates for July 2026. ' +
+          'Return ONLY this JSON (values in percent, e.g. 4.44 not 0.0444): ' +
+          '{"y3m":_,"y2":_,"y5":_,"y10":_,"y30":_,"asOf":"YYYY-MM-DD"} ' +
+          'No markdown, no explanation, only the JSON object.'
+        }]
+      })
+    });
+    const d=await res.json();
+    const txt=d.content.filter(c=>c.type==='text').map(c=>c.text).join('');
+    const j=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    if(!j.y10)throw new Error('no y10');
+    UST={...UST,...j,source:'ai-websearch'};
+    BASE.y10=UST.y10;
+    applyUST(false);return;
+  }catch(e){console.warn('AI yield search:',e.message);}
+
+  // ── Fallback: hardcoded reference ──
+  UST={y3m:5.31,y2:4.82,y5:4.55,y10:4.44,y30:4.61,source:'reference',asOf:'2026-07-07'};
+  BASE.y10=UST.y10;
+  applyUST(false);
+}
+
+function applyUST(live){
+  recompute();
+  const y=UST;
+  // banner
+  document.getElementById('ust-banner').textContent=
+    y.y10!=null?`10Y CMT: ${y.y10.toFixed(3)}%  ·  2Y: ${(y.y2??0).toFixed(3)}%  ·  30Y: ${(y.y30??0).toFixed(3)}%  ·  ${live?'treasury.gov LIVE':y.source}`:'Loading…';
+  // anchor note
+  const an=document.getElementById('anchor-note');
+  an.textContent=live?`✓ treasury.gov LIVE (${y.asOf})`:`~ ${y.source} (${y.asOf})`;
+  an.style.color=live?'var(--green)':'var(--amber)';
+  // src badge
+  const sb=document.getElementById('ust-src');
+  sb.textContent=live?'✓ LIVE':y.source;sb.style.color=live?'var(--green)':'var(--amber)';
+  // rates cards
+  const cards=[
+    {label:'3M T-Bill',val:y.y3m,color:'var(--label)'},
+    {label:'2Y CMT',val:y.y2,color:'var(--blue)'},
+    {label:'10Y CMT',val:y.y10,color:'var(--amber)',pri:true},
+    {label:'30Y CMT',val:y.y30,color:'var(--purple)'},
+  ];
+  document.getElementById('rates-grid').innerHTML=cards.map(c=>`
+    <div class="rate-card">
+      <div class="rate-label">${c.label}</div>
+      <div class="rate-val" style="color:${c.color}">${c.val!=null?c.val.toFixed(3)+'%':'—'}</div>
+      <div class="rate-sub">${c.pri&&live?'MBS anchor · live':'As of '+y.asOf}</div>
+      ${live?'<div class="rate-live"></div>':''}
+    </div>`).join('');
+  // disclaimer
+  document.getElementById('disc').innerHTML=live
+    ?`<strong style="color:var(--green)">✓ Real UST data: treasury.gov (${y.asOf})</strong> — MBS prices derived from 10Y CMT (${y.y10?.toFixed(3)}%) + historical agency OAS spreads. Intraday ±0.5bp noise overlaid. Exact TBA quotes require Bloomberg / ICE institutional access.`
+    :`<strong style="color:var(--amber)">~ Benchmark: ${y.source} (${y.asOf})</strong> — treasury.gov direct feed may be blocked by CORS in sandbox; works in production deployment. MBS prices derived from benchmark + historical OAS spreads.`;
+  // bottom bar
+  const bs=document.getElementById('btm-src');
+  bs.textContent=live?'✓ UST LIVE: treasury.gov':`~ UST: ${y.source}`;
+  bs.style.color=live?'var(--green)':'var(--amber)';
+  renderTable(false);renderTape();
+}
+
+// ── BUILD TABLE ──
+function buildTable(){
+  document.getElementById('mbs-body').innerHTML=BONDS.map(b=>`
+    <tr id="row-${b.id}">
+      <td><div class="coupon-label">${b.name}</div><div class="coupon-sub">${b.agency} 30Y TBA</div></td>
+      <td class="price-cell" id="px-${b.id}">—</td>
+      <td id="chg-${b.id}" class="chg-fl">—</td>
+      <td class="yield-cell" id="yld-${b.id}">—</td>
+      <td class="oas-cell" id="oas-${b.id}">—</td>
+      <td class="spr-cell" id="spr-${b.id}">—</td>
+      <td>
+        <span class="vol-bar" style="width:${(b.vol/maxVol*78).toFixed(0)}px"></span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:5px">${b.vol.toFixed(2)}B</span>
+      </td>
+      <td><canvas class="spark" id="sp-${b.id}" width="70" height="22"></canvas></td>
+    </tr>`).join('');
+}
+
+function renderTable(flash){
+  const y10=UST.y10;
+  BONDS.forEach(b=>{
+    const s=S[b.id];
+    const pxEl=document.getElementById('px-'+b.id);if(!pxEl)return;
+    pxEl.textContent=s.price.toFixed(3);
+    if(flash){pxEl.classList.remove('flash-up','flash-dn');void pxEl.offsetWidth;pxEl.classList.add(s.chg>=0?'flash-up':'flash-dn');}
+    const ce=document.getElementById('chg-'+b.id);
+    ce.textContent=(s.chg>=0?'+':'')+s.chg.toFixed(3);
+    ce.className=s.chg>0.001?'chg-up':s.chg<-0.001?'chg-dn':'chg-fl';
+    document.getElementById('yld-'+b.id).textContent=s.yield.toFixed(3)+'%';
+    document.getElementById('oas-'+b.id).textContent=s.oas.toFixed(0);
+    document.getElementById('spr-'+b.id).textContent=y10!=null?'+'+((s.yield-y10)*100).toFixed(0)+'bp':'—';
+    drawSpark(b.id);
+  });
+  document.getElementById('last-upd').textContent=
+    'Updated: '+new Date().toLocaleTimeString('en-US',{hour12:false,timeZone:'America/New_York'})+' ET';
+}
+
+function drawSpark(id){
+  const cv=document.getElementById('sp-'+id);if(!cv)return;
+  const ctx=cv.getContext('2d'),d=H[id],w=cv.width,h=cv.height;
+  ctx.clearRect(0,0,w,h);if(d.length<2)return;
+  const mn=Math.min(...d),mx=Math.max(...d),rng=mx-mn||0.01;
+  ctx.beginPath();
+  d.forEach((v,i)=>{const x=(i/(d.length-1))*w,y=h-((v-mn)/rng)*(h-4)-2;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.strokeStyle=d[d.length-1]>=d[0]?'#00E5A0':'#FF4D6A';ctx.lineWidth=1.5;ctx.stroke();
+}
+
+// ── TAPE ──
+const STATIC=[
+  {n:'Fed Funds',p:'5.25–5.50%',c:'unch',up:null},
+  {n:'SOFR',p:'5.31%',c:'-0.001%',up:false},
+  {n:'HY CDX',p:'338bp',c:'+2bp',up:false},
+  {n:'IG CDX',p:'68bp',c:'-1bp',up:true},
+  {n:'VIX',p:'13.9',c:'+0.2',up:false},
+  {n:'DXY',p:'104.6',c:'-0.1',up:false},
+];
+function renderTape(){
+  const y=UST;
+  const ustR=[
+    {n:'3M Bill',p:y.y3m!=null?y.y3m.toFixed(3)+'%':'—',c:'',up:null},
+    {n:'2Y CMT', p:y.y2!=null?y.y2.toFixed(3)+'%':'—',c:'',up:null},
+    {n:'5Y CMT', p:y.y5!=null?y.y5.toFixed(3)+'%':'—',c:'',up:null},
+    {n:'10Y CMT',p:y.y10!=null?y.y10.toFixed(3)+'%':'—',c:'',up:null},
+    {n:'30Y CMT',p:y.y30!=null?y.y30.toFixed(3)+'%':'—',c:'',up:null},
+  ];
+  const mbsR=BONDS.slice(0,7).map(b=>({n:b.name,p:S[b.id].price.toFixed(3),c:(S[b.id].chg>=0?'+':'')+S[b.id].chg.toFixed(3),up:S[b.id].chg>=0}));
+  const all=[...ustR,...STATIC,...mbsR];
+  document.getElementById('tape').innerHTML=[...all,...all].map(it=>
+    `<div class="tape-item"><span class="tape-name">${it.n}</span><span class="tape-price">${it.p}</span>${it.c?`<span class="tape-chg ${it.up===true?'up':it.up===false?'dn':'fl'}">${it.c}</span>`:''}</div>`).join('');
+}
+
+// ── INTRADAY TICK ──
+function tick(){
+  if(UST.y10===null||BASE.y10===null)return;
+  const noise=(Math.random()-0.499)*0.006;
+  const pull=(BASE.y10-UST.y10)*0.03;
+  UST.y10=Math.max(2.5,Math.min(8.0,UST.y10+noise+pull));
+  if(UST.y2) UST.y2=Math.max(2.0,Math.min(8.5,UST.y2+noise*0.85+(BASE.y10*0.95-UST.y2)*0.03));
+  if(UST.y30)UST.y30=Math.max(2.5,Math.min(8.0,UST.y30+noise*0.55+(BASE.y10*1.02-UST.y30)*0.03));
+  document.getElementById('ust-banner').textContent=
+    `10Y CMT: ${UST.y10.toFixed(3)}%  ·  2Y: ${(UST.y2??0).toFixed(3)}%  ·  30Y: ${(UST.y30??0).toFixed(3)}%  ·  ${UST.source==='treasury.gov'?'treasury.gov LIVE':UST.source}`;
+  recompute();renderTable(true);renderTape();
+}
+
+// ── AI NEWS ──
+async function fetchNews(){
+  const c=document.getElementById('news-container');
+  c.innerHTML='<div class="news-loading"><div class="spinner"></div>Fetching live market stories…</div>';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:1400,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:
+          'You are a senior fixed income strategist. Today is July 8, 2026. ' +
+          'Search the web and identify the 6 most impactful RECENT economic stories for ' +
+          'mortgage-backed securities (MBS) and bond markets. Topics: Fed policy, CPI/PCE, ' +
+          'payrolls, housing data, Treasury supply, prepayment speeds, global central banks, credit spreads. ' +
+          'Return ONLY a JSON array (no markdown, no backticks): ' +
+          '[{"tag":"CATEGORY","headline":"concise headline","summary":"2-3 sentence market impact summary","impact":"bull OR bear OR neut","badge":"e.g. MBS Bullish"}]'
+        }]
+      })
+    });
+    const d=await res.json();
+    const txt=d.content.filter(x=>x.type==='text').map(x=>x.text).join('');
+    const stories=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    c.innerHTML=stories.map(s=>`
+      <div class="news-item">
+        <div class="news-cat">${s.tag}</div>
+        <div class="news-hl">${s.headline}</div>
+        <div class="news-body">${s.summary}</div>
+        <span class="news-badge ${s.impact}">${s.impact==='bull'?'▲':s.impact==='bear'?'▼':'◆'} ${s.badge}</span>
+      </div>`).join('');
+  }catch(e){
+    c.innerHTML=`<div class="news-loading" style="color:var(--red)">⚠ Could not load stories<br><span style="font-size:9px;color:var(--muted)">${e.message}</span></div>`;
+  }
+}
+
+// ── CLOCK ──
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour12:false})+' ET';},1000);
+document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour12:false})+' ET';
+
+// ── BOOT ──
+buildTable();renderTape();
+fetchUST();
+fetchNews();
+setInterval(fetchUST,5*60*1000);
+setInterval(fetchNews,5*60*1000);
+setInterval(tick,2000);
+</script>
+</body>
+</html>
